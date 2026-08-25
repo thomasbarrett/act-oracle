@@ -36,6 +36,7 @@ class OracleVisitor(IDLV2Visitor):
             'select_lt': 'SELECT_LT',
             'rsqrt': 'RSQRT',
             'negate': 'NEGATE',
+            'concatenate': 'CONCATENATE',
         }
 
         # Identity element for a generic `reduce`, keyed by the prefix of the
@@ -98,7 +99,8 @@ class OracleVisitor(IDLV2Visitor):
             if len(operand_names) > 0:
                 mapping["in"] = f'"{operand_names[0]}"'
 
-        elif template_name in ['ADD', 'SUBTRACT', 'MULTIPLY', 'DIVIDE', 'MAXIMUM', 'MINIMUM', 'XOR']:
+        elif template_name in ['ADD', 'SUBTRACT', 'MULTIPLY', 'DIVIDE', 'MAXIMUM', 'MINIMUM', 'XOR',
+                               'CONCATENATE']:
             if len(operand_names) >= 2:
                 mapping["A"] = f'"{operand_names[0]}"'
                 mapping["B"] = f'"{operand_names[1]}"'
