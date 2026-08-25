@@ -91,6 +91,14 @@ ENTRY gemm {
 """)
 
 # (7) softmax: Applies softmax along dimension 1 (rows) on d2
+# NOTE: the broadcast below uses dimensions={1}, not {0}. Until the broadcast
+# fix in taidl_to/oracle_visitor.py, the generator ignored this attribute and
+# leaked `dim` from the preceding reduce, so this instruction always broadcast
+# the per-row sums back across rows (result[i,j] = reduced[j]). data/attention.dat
+# was produced with those semantics, so the spec now says so explicitly and the
+# golden data still matches bit-for-bit. Flagged upstream: if the accelerator
+# really computes a row-wise softmax, this should be {0} and the reference data
+# needs regenerating.
 instr = qkv.add_instruction("softmax", ["n"], ["addr"])
 instr.set_inputs([["d2", ["@a.addr"], ["@c.n"]]])
 instr.set_outputs([["d2", ["@a.addr"], ["@c.n"]]])  # In-place operation
@@ -99,7 +107,7 @@ ENTRY softmax {
     %In1 = bf16[`@c.n`,64] parameter(0);
     %a = bf16[`@c.n`,64] exponential(%In1);
     %reduced = bf16[`@c.n`] reduce_add(%a), dimensions={1};
-    %b = bf16[`@c.n`,64] broadcast(%reduced), dimensions={0};
+    %b = bf16[`@c.n`,64] broadcast(%reduced), dimensions={1};
     ROOT %Out0 = bf16[`@c.n`,64] divide(%a, %b);
 }
 """)

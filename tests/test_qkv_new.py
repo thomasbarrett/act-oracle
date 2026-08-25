@@ -5,7 +5,9 @@ import pytest
 from conftest import EXAMPLES_DIR, generate_and_import_oracle, run_kernel
 
 QKV_DIR = os.path.join(EXAMPLES_DIR, "QKV_new")
-kernel, api = generate_and_import_oracle(QKV_DIR)
+# The QKV_new spec declares Accelerator("QKV"), so the generator writes it to
+# targets/QKV -- the target name is not the directory name here.
+kernel, api = generate_and_import_oracle(QKV_DIR, target="QKV", spec_name="QKV_new.py")
 
 
 @pytest.mark.parametrize("kernel_name", ["attention_k1", "attention_k2", "attention_k3", "attention_k4"])

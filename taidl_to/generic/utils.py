@@ -184,6 +184,28 @@ def simplify_vals(vals, attrs, state, lvars, consts):
     vals = list(map(simplify, vals))
     return vals
 
+def literal(val, attrs, state, lvars, consts):
+    """Resolve a `constant` literal.
+
+    `simplify_vals` is for shape arithmetic and coerces its result to int, which
+    silently turns 0.5 into 0. Constants must survive as written, so this does
+    the same @a./@c. substitution but keeps floats, and passes through anything
+    that is not a plain arithmetic expression (`inf`, `-inf`, `nan`).
+
+    Literals reach here through the grammar's EXPRESSION token -- `0.5` -- since
+    only integers lex as INT; the enclosing backticks are stripped here.
+    """
+    import ast
+
+    val = str(val).strip().strip('`').strip()
+    val = substitute(val, attrs, state, lvars, consts)
+    try:
+        out = eval(compile(ast.parse(val, mode='eval'), '', 'eval'))
+    except Exception:
+        return val
+    return repr(out) if isinstance(out, float) else str(out)
+
+
 def non_dynamic_slice(slice_configs, attrs, state, lvars, consts):
     slice_configs = [sc.split(':') for sc in slice_configs]
     simplify = lambda x: str(int(compute(substitute(x, attrs, state, lvars, consts))))

@@ -46,9 +46,28 @@ def generate_hlo(hbm: int) -> str:
     return api.generate_full_hlotext(hbm)
 
 
-def compile_or_load_executable(hlo_str: str):
+# FFI handlers are registered process-wide, but every generated target ships its
+# own copy of the same extension module. Registering a second target's copy
+# raises ("Duplicate FFI handler registration ... with different bundle
+# addresses"), so only the first registration in a process is applied -- the
+# copies are built from the same source and are interchangeable.
+_ffi_registered = set()
+
+
+def _register_ffi_targets():
     for name, target in print_handler_ext.registrations().items():
-        ffi.register_ffi_target(name, target)
+        if name in _ffi_registered:
+            continue
+        try:
+            ffi.register_ffi_target(name, target)
+        except Exception:
+            # Another target in this process already claimed the name.
+            pass
+        _ffi_registered.add(name)
+
+
+def compile_or_load_executable(hlo_str: str):
+    _register_ffi_targets()
 
     hlo_module = xla_client._xla.hlo_module_from_text(hlo_str)
     hlo_proto = hlo_module.as_serialized_hlo_module_proto()

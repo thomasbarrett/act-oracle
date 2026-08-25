@@ -28,7 +28,17 @@ class OracleVisitor(IDLV2Visitor):
             'xor': 'XOR',
             'dot': 'DOT',
             'reduce_add': 'REDUCE_ADD',
+            # Ops whose templates already existed but were never reachable
+            # because the visitor had no mapping for them.
+            'exp': 'EXP',
+            'constant': 'CONSTANT',
+            'reduce': 'REDUCE',
+            'select_lt': 'SELECT_LT',
         }
+
+        # Identity element for a generic `reduce`, keyed by the prefix of the
+        # to_apply function. `reduce` may also pass init=<literal> explicitly.
+        self.reduce_init = {'add': '0', 'max': '-inf', 'min': 'inf'}
 
     def visitModule(self, ctx: IDLV2Parser.ModuleContext):
         self.instruction_lines.append("Module:")
@@ -93,6 +103,16 @@ class OracleVisitor(IDLV2Visitor):
         elif template_name == 'BROADCAST':
             if len(operand_names) > 0:
                 mapping["A"] = f'"{operand_names[0]}"'
+            # Which output dimensions the operand's dimensions map onto. A
+            # scalar operand broadcasts with dimensions={}; the template used to
+            # ignore this attribute entirely and emit an undefined name.
+            dims = attributes.get('dimensions')
+            if dims is None:
+                mapping["dims"] = ''
+            elif isinstance(dims, list):
+                mapping["dims"] = ', '.join(str(d) for d in dims)
+            else:
+                mapping["dims"] = str(dims)
 
         elif template_name == 'TRANSPOSE':
             if len(operand_names) > 0:
@@ -122,24 +142,60 @@ class OracleVisitor(IDLV2Visitor):
             mapping["rb"] = format_dims(attributes.get('rhs_batch_dims', []))
             mapping["rc"] = format_dims(attributes.get('rhs_contracting_dims', [0]))
 
-        elif template_name == 'REDUCE_ADD':
+        elif template_name == 'CONSTANT':
+            # `constant` has no operands in HLO's sense -- the literal rides in
+            # the operand slot: `%one = bf16[1] constant(1)`.
+            assert len(operand_names) == 1, "constant takes exactly one literal"
+            mapping["const"] = f'"{operand_names[0]}"'
+            # A literal is a scalar, but the grammar's `shape` rule needs at
+            # least one dimension, so there is no way to spell `TYPE[]`. Treat
+            # the one spellable degenerate shape, `TYPE[1]`, as that scalar --
+            # HLO only broadcasts from a scalar, never from a size-1 dimension.
+            if lhs_shape.strip() == '1':
+                mapping["size"] = '[]'
+
+        elif template_name == 'SELECT_LT':
+            assert len(operand_names) == 4, "select_lt takes (lhs, rhs, on_lt, on_ge)"
+            for key, name in zip(('A', 'B', 'C', 'D'), operand_names):
+                mapping[key] = f'"{name}"'
+
+        elif template_name in ('REDUCE_ADD', 'REDUCE'):
             assert(len(operand_names) == 1)
             mapping["A"] = f'"{operand_names[0]}"'
-            if 'dimensions' in attributes:
-                dims = attributes['dimensions']
-                if isinstance(dims, list):
-                    mapping["dims"] = '{' + ', '.join(str(d) for d in dims) + '}'
-                else:
-                    mapping["dims"] = '{' + str(dims) + '}'
+            mapping["dims"] = self._format_dims(attributes.get('dimensions'))
+            if template_name == 'REDUCE_ADD':
+                to_apply = f'%add_{lhs_type}'
             else:
-                mapping["dims"] = '{}'
-            mapping["to_apply"] = f'"%add_{lhs_type}"'
+                to_apply = attributes.get('to_apply')
+                assert to_apply, "reduce requires a to_apply=%<fn> attribute"
+                if not to_apply.startswith('%'):
+                    to_apply = '%' + to_apply
+            mapping["to_apply"] = f'"{to_apply}"'
+            # The reduction's identity element. Derived from the combiner's name
+            # (add -> 0, max -> -inf, min -> inf) unless given explicitly.
+            init = attributes.get('init')
+            if init is None:
+                combiner = to_apply.lstrip('%').split('_')[0]
+                init = self.reduce_init.get(combiner)
+                assert init is not None, (
+                    f"cannot infer an identity for to_apply={to_apply}; "
+                    f"pass init=<literal> explicitly")
+            mapping["init"] = f'"{init}"'
             template_name = "REDUCE"
 
         template_code = generate_code(templates[template_name], mapping)
 
         for line in template_code.strip().split('\n'):
             self.instruction_lines.append(line)
+
+    @staticmethod
+    def _format_dims(dims):
+        """Render a `dimensions=` attribute as an HLO brace list."""
+        if dims is None:
+            return '{}'
+        if isinstance(dims, list):
+            return '{' + ', '.join(str(d) for d in dims) + '}'
+        return '{' + str(dims) + '}'
 
     def visitAttribute(self, ctx: IDLV2Parser.AttributeContext):
         attr_name = ctx.IDENTIFIER().getText()

@@ -33,6 +33,51 @@ add_s32{
 	%b = s32[] parameter(1)
 	ROOT %sum = s32[] add(%a, %b)
 }
+add_f32{
+	%a = f32[] parameter(0)
+	%b = f32[] parameter(1)
+	ROOT %sum = f32[] add(%a, %b)
+}
+max_bf16{
+	%a = bf16[] parameter(0)
+	%b = bf16[] parameter(1)
+	ROOT %m = bf16[] maximum(%a, %b)
+}
+max_f32{
+	%a = f32[] parameter(0)
+	%b = f32[] parameter(1)
+	ROOT %m = f32[] maximum(%a, %b)
+}
+max_s32{
+	%a = s32[] parameter(0)
+	%b = s32[] parameter(1)
+	ROOT %m = s32[] maximum(%a, %b)
+}
+min_bf16{
+	%a = bf16[] parameter(0)
+	%b = bf16[] parameter(1)
+	ROOT %m = bf16[] minimum(%a, %b)
+}
+min_f32{
+	%a = f32[] parameter(0)
+	%b = f32[] parameter(1)
+	ROOT %m = f32[] minimum(%a, %b)
+}
+min_s32{
+	%a = s32[] parameter(0)
+	%b = s32[] parameter(1)
+	ROOT %m = s32[] minimum(%a, %b)
+}
+max_s8{
+	%a = s8[] parameter(0)
+	%b = s8[] parameter(1)
+	ROOT %m = s8[] maximum(%a, %b)
+}
+min_s8{
+	%a = s8[] parameter(0)
+	%b = s8[] parameter(1)
+	ROOT %m = s8[] minimum(%a, %b)
+}
 """
 
 main_function_call = """
@@ -383,8 +428,9 @@ a_loc = parameter_util(global_counters,  attrs, state, lvars, comp_attrs, {{A}})
 lhs_loc, lhs_type = lhs_util(attrs, state, global_counters, lvars, comp_attrs, {{lhs}}, {{type}}, {{size}})
 dim = {{dims}}
 apply = {{to_apply}}
+init = {{init}}
 dtype = lhs_type.split('[')[0]
-line = f'{lhs_loc} = {lhs_type} reduce({a_loc}, {dtype}[] constant(0)), dimensions={dim}, to_apply={apply}'
+line = f'{lhs_loc} = {lhs_type} reduce({a_loc}, {dtype}[] constant({init})), dimensions={dim}, to_apply={apply}'
 output.append(line)
 
 ### TEMPLATE: DYNAMIC_UPDATE_SLICE ###
@@ -398,16 +444,16 @@ output.append(line)
 
 ### TEMPLATE: CONSTANT ###
 lhs_loc, lhs_type = lhs_util(attrs, state, global_counters, lvars, comp_attrs, {{lhs}}, {{type}}, {{size}})
-simplify = simplify_vals([{{const}}], attrs, state, lvars, comp_attrs)
-const= simplify[0]
+const = literal({{const}}, attrs, state, lvars, comp_attrs)
 line = f"{lhs_loc} = {lhs_type} constant({const})"
 output.append(line)
 
 ### TEMPLATE: BROADCAST ###
 b_loc = parameter_util(global_counters,  attrs, state, lvars, comp_attrs, {{A}})
 lhs_loc, lhs_type = lhs_util(attrs, state, global_counters, lvars, comp_attrs, {{lhs}}, {{type}}, {{size}})
-dims = create_num_str({{size}})
-line = f"{lhs_loc} = {lhs_type} broadcast({b_loc}), dimensions={dim}"
+dims = "{{{dims}}}"
+dims = dims.replace("'","")
+line = f"{lhs_loc} = {lhs_type} broadcast({b_loc}), dimensions={dims}"
 output.append(line)
 
 ### TEMPLATE: BROADCAST_DIM ###
