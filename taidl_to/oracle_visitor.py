@@ -34,6 +34,8 @@ class OracleVisitor(IDLV2Visitor):
             'constant': 'CONSTANT',
             'reduce': 'REDUCE',
             'select_lt': 'SELECT_LT',
+            'rsqrt': 'RSQRT',
+            'negate': 'NEGATE',
         }
 
         # Identity element for a generic `reduce`, keyed by the prefix of the
@@ -91,7 +93,8 @@ class OracleVisitor(IDLV2Visitor):
             "size": f'[{lhs_shape}]'
         }
 
-        if template_name in ['RESHAPE', 'CONVERT', 'COPY', 'BITCAST_CONVERT', 'EXP']:
+        if template_name in ['RESHAPE', 'CONVERT', 'COPY', 'BITCAST_CONVERT', 'EXP',
+                             'RSQRT', 'NEGATE']:
             if len(operand_names) > 0:
                 mapping["in"] = f'"{operand_names[0]}"'
 

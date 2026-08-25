@@ -351,6 +351,18 @@ lhs_loc, lhs_type = lhs_util(attrs, state, global_counters, lvars, comp_attrs, {
 line = f'{lhs_loc} = {lhs_type} exponential({rhs_loc})'
 output.append(line)
 
+### TEMPLATE: RSQRT ###
+rhs_loc = parameter_util(global_counters,  attrs, state, lvars, comp_attrs, {{in}})
+lhs_loc, lhs_type = lhs_util(attrs, state, global_counters, lvars, comp_attrs, {{lhs}}, {{type}}, {{size}})
+line = f'{lhs_loc} = {lhs_type} rsqrt({rhs_loc})'
+output.append(line)
+
+### TEMPLATE: NEGATE ###
+rhs_loc = parameter_util(global_counters,  attrs, state, lvars, comp_attrs, {{in}})
+lhs_loc, lhs_type = lhs_util(attrs, state, global_counters, lvars, comp_attrs, {{lhs}}, {{type}}, {{size}})
+line = f'{lhs_loc} = {lhs_type} negate({rhs_loc})'
+output.append(line)
+
 ### TEMPLATE: BITCAST_CONVERT ###
 rhs_loc = parameter_util(global_counters,  attrs, state, lvars, comp_attrs, {{in}})
 lhs_loc, lhs_type = lhs_util(attrs, state, global_counters, lvars, comp_attrs, {{lhs}}, {{type}}, {{size}})
