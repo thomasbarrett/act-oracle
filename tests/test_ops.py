@@ -98,3 +98,11 @@ def test_broadcast_honours_dimensions(oracle, data):
     got = run(oracle, "colsum", x, rows_out=1)
     want = x.sum(axis=0)[None, :]
     np.testing.assert_allclose(got, want, rtol=4 * BF16_EPS)
+
+
+def test_two_selects_in_one_instruction(oracle, data):
+    """Each select_lt names an intermediate compare; two in one block must not
+    collide. Exact -- clamp only ever selects an input value."""
+    x = data["mixed"]
+    got = run(oracle, "clamp", x)
+    np.testing.assert_array_equal(got, np.clip(x, -1.0, 1.0))

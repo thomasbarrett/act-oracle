@@ -73,6 +73,22 @@ ENTRY relu {
 }
 """)
 
+# Two `select_lt`s in one semantics block: clamp to [-1, 1]. Each select names
+# an intermediate `compare`, and those names used to be derived from a
+# per-instruction counter, so the second one collided with the first.
+_unary("clamp", """
+ENTRY clamp {
+    %In1 = bf16[`@c.n`,64] parameter(0);
+    %lo_c = bf16[1] constant(`-1.0`);
+    %lo = bf16[`@c.n`,64] broadcast(%lo_c), dimensions={};
+    %hi_c = bf16[1] constant(`1.0`);
+    %hi = bf16[`@c.n`,64] broadcast(%hi_c), dimensions={};
+    %a = bf16[`@c.n`,64] select_lt(%In1, %lo, %lo, %In1);
+    ROOT %Out0 = bf16[`@c.n`,64] select_lt(%hi, %a, %hi, %a);
+}
+""")
+
+
 # Reduction along the other axis, to pin down that `dimensions` is honoured.
 instr = ops.add_instruction("colsum", ["n"], ["p", "o"])
 instr.set_inputs([["d1", ["@a.p"], ["@c.n"]]])

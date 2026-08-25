@@ -483,7 +483,7 @@ rhs_second = parameter_util(global_counters,  attrs, state, lvars, comp_attrs, {
 rhs_choice1 = parameter_util(global_counters,  attrs, state, lvars, comp_attrs, {{C}})
 rhs_choice2 = parameter_util(global_counters,  attrs, state, lvars, comp_attrs, {{D}})
 lhs_loc, lhs_type = lhs_util(attrs, state, global_counters, lvars, comp_attrs, {{lhs}}, {{type}}, {{size}})
-comp_loc = f'comp.{global_counters["loop_counter"]}.{global_counters["instruction_counter"]}'
+comp_loc = 'comp.' + lhs_loc.lstrip('%')
 lhs_dim = get_dim({{size}}, attrs, state, lvars, comp_attrs)
 line = f'{comp_loc} = pred{lhs_dim} compare({rhs_first}, {rhs_second}), direction=LT\n'
 line += f'\t{lhs_loc} = {lhs_type} select({comp_loc}, {rhs_choice1}, {rhs_choice2})'
@@ -495,7 +495,7 @@ rhs_second = parameter_util(global_counters,  attrs, state, lvars, comp_attrs, {
 rhs_choice1 = parameter_util(global_counters,  attrs, state, lvars, comp_attrs, {{C}})
 rhs_choice2 = parameter_util(global_counters,  attrs, state, lvars, comp_attrs, {{D}})
 lhs_loc, lhs_type = lhs_util(attrs, state, global_counters, lvars, comp_attrs, {{lhs}}, {{type}}, {{size}})
-comp_loc = f'comp.{global_counters["loop_counter"]}.{global_counters["instruction_counter"]}'
+comp_loc = 'comp.' + lhs_loc.lstrip('%')
 lhs_dim = get_dim({{size}}, attrs, state, lvars, comp_attrs)
 line = f'{comp_loc} = pred{lhs_dim} compare({rhs_first}, {rhs_second}), direction=LT\n'
 line += f'\t{lhs_loc} = {lhs_type} select({comp_loc}, {rhs_choice1}, {rhs_choice2})'
@@ -507,7 +507,7 @@ rhs_second = {{B}}
 rhs_choice1 = parameter_util(global_counters,  attrs, state, lvars, comp_attrs, {{C}})
 rhs_choice2 = parameter_util(global_counters,  attrs, state, lvars, comp_attrs, {{D}})
 lhs_loc, lhs_type = lhs_util(attrs, state, global_counters, lvars, comp_attrs, {{lhs}}, {{type}}, {{size}})
-comp_loc = f'comp.{global_counters["loop_counter"]}.{global_counters["instruction_counter"]}'
+comp_loc = 'comp.' + lhs_loc.lstrip('%')
 lhs_dim = get_dim({{size}}, attrs, state, lvars, comp_attrs)
 line = f'%{comp_loc}.1 = pred[] compare(%{rhs_first}, s32[] constant(0)), direction=EQ\n'
 line += f'%{comp_loc}.2 = pred[] compare(%{rhs_second}, s32[] constant(0)), direction=EQ\n'
